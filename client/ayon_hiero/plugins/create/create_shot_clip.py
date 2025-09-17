@@ -5,6 +5,7 @@ from ayon_hiero.api import constants, plugin, lib, tags
 
 from ayon_core.pipeline.create import CreatorError, CreatedInstance
 from ayon_core.lib import BoolDef, EnumDef, TextDef, UILabelDef, NumberDef
+from ayon_core.pipeline import get_current_context
 
 import hiero
 
@@ -87,6 +88,28 @@ CLIP_ATTR_DEFS = [
     )
 ]
 
+
+def get_context():
+    """
+    Get the current context information. like episode, sequence and shot names.
+    """
+    folder_path = get_current_context().get("folder_path", "")
+    post_shots = folder_path.split("/shots", 1)[-1].strip("/")
+    folders = post_shots.split("/") if post_shots else []
+
+    episode_name = None
+    sequence_name = None
+    shot_name = None
+
+    if len(folders) == 2:
+        sequence_name = folders[0]
+    elif len(folders) == 3:
+        episode_name = folders[0]
+        sequence_name = folders[1]
+        shot_name = folders[2]
+
+    return episode_name, sequence_name, shot_name
+    
 
 class _HieroInstanceCreator(plugin.HiddenHieroCreator):
     """Wrapper class for clip types products.
@@ -327,6 +350,8 @@ OTIO file.
         # Project settings might be applied to this creator via
         # the inherited `Creator.apply_settings`
         presets = self.presets
+        
+        episode_name, sequence_name, shot_name = get_context()
 
         return [
 
@@ -390,13 +415,13 @@ OTIO file.
                 "episode",
                 label="{episode}",
                 tooltip=f"Name of episode.\n{tokens_help}",
-                default=presets.get("episode", "ep01"),
+                default=episode_name if episode_name else presets.get("episode", "ep01"),
             ),
             TextDef(
                 "sequence",
                 label="{sequence}",
                 tooltip=f"Name of sequence of shots.\n{tokens_help}",
-                default=presets.get("sequence", "sq01"),
+                default=sequence_name if sequence_name else presets.get("sequence", "sq01"),
             ),
             TextDef(
                 "track",
