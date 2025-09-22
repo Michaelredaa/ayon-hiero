@@ -262,7 +262,7 @@ class _HieroInstanceClipCreatorBase(_HieroInstanceCreator):
                     "review",
                     label="Review",
                     tooltip="Switch to reviewable instance",
-                    default=False,
+                    default=True,
                 )
             )
 
