@@ -7,6 +7,12 @@ from ayon_core.pipeline.create import CreatorError, CreatedInstance
 from ayon_core.lib import BoolDef, EnumDef, TextDef, UILabelDef, NumberDef
 from ayon_core.pipeline import get_current_context
 
+try:
+    from ayon_core.pipeline.create import ParentFlags
+except ImportError:
+    # Parenting was added with 'https://github.com/ynput/ayon-core/pull/1395'
+    ParentFlags = None
+
 import hiero
 
 
@@ -114,6 +120,17 @@ def get_context():
 class _HieroInstanceCreator(plugin.HiddenHieroCreator):
     """Wrapper class for clip types products.
     """
+
+    def _add_instance_to_context(self, instance):
+        parent_id = instance.get("parent_instance_id")
+        if parent_id is not None and ParentFlags is not None:
+            instance.set_parent(
+                parent_id,
+                # Disable if a parent is disabled and delete if a parent
+                #   is deleted
+                ParentFlags.share_active | ParentFlags.parent_lifetime
+            )
+        super()._add_instance_to_context(instance)
 
     def create(self, instance_data, _):
         """Return a new CreateInstance for new shot from Hiero.
@@ -238,6 +255,7 @@ class _HieroInstanceClipCreatorBase(_HieroInstanceCreator):
             instance.set_create_attr_defs(attr_defs)
 
     def get_attr_defs_for_instance(self, instance):
+        parent_instance = instance.creator_attributes.get("parent_instance")
 
         current_sequence = lib.get_current_sequence()
         if current_sequence is not None:
@@ -253,6 +271,7 @@ class _HieroInstanceClipCreatorBase(_HieroInstanceCreator):
                 "parentInstance",
                 label="Linked to",
                 disabled=True,
+                default=parent_instance,
             )
         ]
 
